@@ -1,0 +1,51 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = "../build"
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+//buildscript {
+//    ext.kotlin_version = '1.7.1'
+//    repositories {
+//        google()
+//        mavenCentral()
+//    }
+//    dependencies {
+//        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.10"
+//        classpath 'com.android.tools.build:gradle:8.5.2'
+////        implementation("com.google.android.gms:play-services-maps:19.0.0")
+//    }
+//}
+//
+//buildscript {
+//    dependencies {
+//        classpath "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1"
+////        implementation 'com.google.android.gms:play-services-maps:19.0.0'
+//    }
+//}
+//secrets {
+//    // Optionally specify a different file name containing your secrets.
+//    // The plugin defaults to "local.properties"
+//    propertiesFileName = "secrets.properties"
+//
+//    // A properties file containing default secret values. This file can be
+//    // checked in version control.
+//    defaultPropertiesFileName = "local.defaults.properties"
+//
+//    // Configure which keys should be ignored by the plugin by providing regular expressions.
+//    // "sdk.dir" is ignored by default.
+//    ignoreList.add("keyToIgnore") // Ignore the key "keyToIgnore"
+//    ignoreList.add("sdk.*")       // Ignore all keys matching the regexp "sdk.*"
+//}
