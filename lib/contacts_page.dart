@@ -4,7 +4,6 @@ import 'package:contacts_service/contacts_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import 'map.dart'; // Import the map screen for selecting a location
 
 class ContactsPage extends StatefulWidget {
@@ -136,6 +135,11 @@ class _ContactsPageState extends State<ContactsPage> {
     }
   }
 
+  // Function to log out and navigate back to login page
+  void _logout(BuildContext context) {
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
   @override
   Widget build(BuildContext context) {
     // Filter contacts based on search query
@@ -147,34 +151,26 @@ class _ContactsPageState extends State<ContactsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nirbhaya 24X7'),
         backgroundColor: Colors.red,
-        actions: [
-          // Add a Hero animation for the full-screen image
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    opaque: false, // Transparent background for the route
-                    pageBuilder: (BuildContext context, _, __) {
-                      return const FullScreenImage();
-                    },
-                  ),
-                );
-              },
-              child: const Hero(
-                tag: 'imageHero',
-                child: CircleAvatar(
-                  backgroundImage: AssetImage('android/images/women_safety.jpeg'),
-                  radius: 20, // Size of the avatar
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Row(
+              children: [
+                CircleAvatar(
+                  backgroundImage: AssetImage('android/images/women_safety.jpeg'), // Ensure this path is correct
+                  radius: 20, // Adjust the size of the logo as needed
                 ),
-              ),
+                SizedBox(width: 10),
+                Text('Nirbhaya 24X7'),
+              ],
             ),
-          ),
-        ],
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () => _logout(context), // Add logout functionality
+            ),
+          ],
+        ),
         // Add a search bar at the bottom of the app bar
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(80.0), // Adjusted size for the search bar
@@ -278,37 +274,6 @@ class _ContactsPageState extends State<ContactsPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: _addContactFromPhone,
         child: const Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-class FullScreenImage extends StatelessWidget {
-  const FullScreenImage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent, // Transparent background
-      body: GestureDetector(
-        onTap: () {
-          Navigator.pop(context); // Close image on tap
-        },
-        child: Stack(
-          children: [
-            // Faded background
-            Container(
-              color: Colors.black.withOpacity(0.7), // Dark overlay
-            ),
-            // Centered image with Hero animation
-            Center(
-              child: Hero(
-                tag: 'imageHero',
-                child: Image.asset('android/images/women_safety.jpeg'),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

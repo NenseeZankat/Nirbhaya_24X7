@@ -40,6 +40,7 @@ dependencies:
   permission_handler: ^11.3.1  # Handles runtime permissions for Android/iOS
   geocoding: ^2.0.5  # Provides geocoding and reverse geocoding features
   http: ^0.13.3  # For making HTTP requests
+  share: ^2.0.4
   #  sms_maintained:
   share_plus:  # Package for sharing content with other apps
   #  flutter_map: ^7.0.2
