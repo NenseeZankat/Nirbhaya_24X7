@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,19 +11,33 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance; // Create an instance of FirebaseAuth
 
   // Function to handle login logic
-  void _login() {
+  void _login() async {
     final email = _emailController.text;
     final password = _passwordController.text;
 
-    // Perform login logic here (e.g., API call)
-    if (email.isNotEmpty && password.isNotEmpty) {
-      Navigator.pushReplacementNamed(context, '/contacts');
-    } else {
-      // Show error message
+    try {
+      if (email.isNotEmpty && password.isNotEmpty) {
+        // Authenticate user with Firebase
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        // On success, navigate to contacts page
+        Navigator.pushReplacementNamed(context, '/contacts');
+      } else {
+        // Show error message if fields are empty
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter both email and password')),
+        );
+      }
+    } catch (e) {
+      // Show error message if login fails
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both email and password')),
+        SnackBar(content: Text('Login failed: ${e.toString()}')),
       );
     }
   }
@@ -47,12 +62,12 @@ class _LoginPageState extends State<LoginPage> {
             // Centered icon above the email field
             const Center(
               child: Icon(
-                Icons.lock, // Use an appropriate icon
-                size: 100, // Adjust size as needed
-                color: Colors.black, // Customize icon color
+                Icons.lock,
+                size: 100,
+                color: Colors.black,
               ),
             ),
-            const SizedBox(height: 24.0), // Space between icon and email field
+            const SizedBox(height: 24.0),
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
@@ -73,7 +88,7 @@ class _LoginPageState extends State<LoginPage> {
             ElevatedButton(
               onPressed: _login,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, // Red background color
+                backgroundColor: Colors.red,
               ),
               child: const Text('Login'),
             ),

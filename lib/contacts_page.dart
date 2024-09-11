@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:contacts_service/contacts_service.dart';
@@ -17,6 +19,8 @@ class _ContactsPageState extends State<ContactsPage> {
   double latitude = 0.0;
   double longitude = 0.0;
   String searchQuery = ''; // Store search query for filtering contacts
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // List<Map<String, dynamic>> contacts = [];
 
   // List of emergency contacts
   List<Map<String, String>> contacts = [
@@ -25,6 +29,68 @@ class _ContactsPageState extends State<ContactsPage> {
     {'name': 'Ambulance', 'phone': '108'},
     {'name': 'Fire Brigade', 'phone': '101'},
   ];
+
+  // _ContactsPageState()
+  // {
+  //   _fetchContactsForUser();
+  // }
+  //
+  // Future<void> _fetchContactsForUser() async {
+  //   try {
+  //     String? userEmail = _auth.currentUser?.email;
+  //
+  //     if (userEmail != null) {
+  //       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+  //           .collection('contacts')
+  //           .where('email', isEqualTo: userEmail)
+  //           .get();
+  //
+  //       List<Map<String, dynamic>> fetchedContacts = querySnapshot.docs.map((doc) {
+  //         return {
+  //           'name': doc['name'] ?? 'Unknown',
+  //           'phone': doc['phone'] ?? 'No phone number',
+  //           'email': doc['email'] ?? 'No email',
+  //         };
+  //       }).toList();
+  //
+  //       // Check if the widget is still mounted before calling setState
+  //       if (mounted) {
+  //         setState(() {
+  //           contacts = fetchedContacts;
+  //         });
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print('Error fetching contacts: $e');
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Failed to fetch contacts')),
+  //       );
+  //     }
+  //   }
+  // }
+
+
+  // Future<void> addContact(String name,String phone) async {
+  //   // Get the current signed-in user
+  //   User? user = FirebaseAuth.instance.currentUser;
+  //
+  //   // Check if the user is signed in
+  //   if (user != null) {
+  //     String email = user.email ?? ''; // Get the user's email, default to empty string if null
+  //
+  //     // Add the contact to Firestore with the signed-in user's email
+  //     await FirebaseFirestore.instance.collection('contacts').add({
+  //       'name': name,
+  //       'phone': phone,
+  //       'email': email, // Add the signed-in user's email
+  //     });
+  //   } else {
+  //     print("No user is signed in.");
+  //     // Handle the case where no user is signed in, perhaps by prompting login
+  //   }
+  // }
+
 
   // Function to make a direct phone call
   void _callContact(String phone) async {
@@ -110,6 +176,7 @@ class _ContactsPageState extends State<ContactsPage> {
                               'name': contact.displayName ?? 'Unknown',
                               'phone': phone,
                             });
+                            // addContact(contact.displayName ?? 'Unknown',phone);
                           });
                           Navigator.of(context).pop();
                         } else {
