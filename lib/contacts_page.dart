@@ -3,9 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:contacts_service/contacts_service.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'Profile_page.dart';
 import 'map.dart'; // Import the map screen for selecting a location
 
 class ContactsPage extends StatefulWidget {
@@ -20,76 +22,118 @@ class _ContactsPageState extends State<ContactsPage> {
   double longitude = 0.0;
   String searchQuery = ''; // Store search query for filtering contacts
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  // List<Map<String, dynamic>> contacts = [];
+  List<Map<String, dynamic>> contacts = [];
 
   // List of emergency contacts
-  List<Map<String, String>> contacts = [
-    {'name': 'Women helpline', 'phone': '181'},
-    {'name': 'Police', 'phone': '100'},
-    {'name': 'Ambulance', 'phone': '108'},
-    {'name': 'Fire Brigade', 'phone': '101'},
-  ];
+  // List<Map<String, String>> contacts = [
+  //   {'name': 'Women helpline', 'phone': '181'},
+  //   {'name': 'Police', 'phone': '100'},
+  //   {'name': 'Ambulance', 'phone': '108'},
+  //   {'name': 'Fire Brigade', 'phone': '101'},
+  // ];
 
-  // _ContactsPageState()
-  // {
-  //   _fetchContactsForUser();
-  // }
-  //
-  // Future<void> _fetchContactsForUser() async {
-  //   try {
-  //     String? userEmail = _auth.currentUser?.email;
-  //
-  //     if (userEmail != null) {
-  //       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-  //           .collection('contacts')
-  //           .where('email', isEqualTo: userEmail)
-  //           .get();
-  //
-  //       List<Map<String, dynamic>> fetchedContacts = querySnapshot.docs.map((doc) {
-  //         return {
-  //           'name': doc['name'] ?? 'Unknown',
-  //           'phone': doc['phone'] ?? 'No phone number',
-  //           'email': doc['email'] ?? 'No email',
-  //         };
-  //       }).toList();
-  //
-  //       // Check if the widget is still mounted before calling setState
-  //       if (mounted) {
-  //         setState(() {
-  //           contacts = fetchedContacts;
-  //         });
-  //       }
-  //     }
-  //   } catch (e) {
-  //     print('Error fetching contacts: $e');
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text('Failed to fetch contacts')),
-  //       );
-  //     }
-  //   }
-  // }
+  @override
+  void initState() {
+    super.initState();
+    _fetchContactsForUser();
+  }
 
 
-  // Future<void> addContact(String name,String phone) async {
-  //   // Get the current signed-in user
-  //   User? user = FirebaseAuth.instance.currentUser;
-  //
-  //   // Check if the user is signed in
-  //   if (user != null) {
-  //     String email = user.email ?? ''; // Get the user's email, default to empty string if null
-  //
-  //     // Add the contact to Firestore with the signed-in user's email
-  //     await FirebaseFirestore.instance.collection('contacts').add({
-  //       'name': name,
-  //       'phone': phone,
-  //       'email': email, // Add the signed-in user's email
-  //     });
-  //   } else {
-  //     print("No user is signed in.");
-  //     // Handle the case where no user is signed in, perhaps by prompting login
-  //   }
-  // }
+  Future<void> _fetchContactsForUser() async {
+    try {
+      String? userEmail = _auth.currentUser?.email;
+
+      if (userEmail != null) {
+        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+            .collection('contacts')
+            .get(); // Fetch all contacts
+
+        List<Map<String, dynamic>> fetchedContacts = querySnapshot.docs.map((doc) {
+          String email = doc['email'] ?? '';
+          // Include the document only if the email matches the user's email or is an empty string
+          if (email == userEmail || email.isEmpty) {
+            return {
+              'name': doc['name'] ?? 'Unknown',
+              'phone': doc['phone'] ?? 'No phone number',
+              'email': email.isEmpty ? 'No email' : email,
+            };
+          } else {
+            return null; // Filter out contacts that don't match
+          }
+        }).where((contact) => contact != null).toList().cast<Map<String, dynamic>>();
+
+        // Check if the widget is still mounted before calling setState
+        if (mounted) {
+          setState(() {
+            contacts = fetchedContacts;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching contacts: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to fetch contacts')),
+        );
+      }
+    }
+  }
+
+
+  Future<void> addContact(String name,String phone) async {
+    // Get the current signed-in user
+    User? user = FirebaseAuth.instance.currentUser;
+
+    // Check if the user is signed in
+    if (user != null) {
+      String email = user.email ?? ''; // Get the user's email, default to empty string if null
+
+      // Add the contact to Firestore with the signed-in user's email
+      await FirebaseFirestore.instance.collection('contacts').add({
+        'name': name,
+        'phone': phone,
+        'email': email, // Add the signed-in user's email
+      });
+    } else {
+      print("No user is signed in.");
+      // Handle the case where no user is signed in, perhaps by prompting login
+    }
+  }
+
+  Future<void> deleteContact(String phone) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      String email = user.email ?? '';
+      try {
+        CollectionReference contactsRef = FirebaseFirestore.instance.collection('contacts');
+        QuerySnapshot snapshot = await contactsRef
+            .where('phone', isEqualTo: phone)
+            .where('email', isEqualTo: email)
+            .get();
+
+        if (snapshot.docs.isNotEmpty) {
+          for (var doc in snapshot.docs) {
+            await doc.reference.delete();
+            print("Contact with phone $phone deleted successfully.");
+          }
+          removeContact(phone);
+        } else {
+          print("No contact found with phone $phone.");
+        }
+      } catch (e) {
+        print("Error deleting contact: $e");
+      }
+    } else {
+      print("No user is signed in.");
+    }
+  }
+
+  void removeContact(String phone) {
+    setState(() {
+      // Find and remove the contact with the given phone number
+      contacts.removeWhere((contact) => contact['phone'] == phone);
+    });
+  }
 
 
   // Function to make a direct phone call
@@ -132,6 +176,57 @@ class _ContactsPageState extends State<ContactsPage> {
     }
   }
 
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    // Get current position and move map to that location
+    Position position = await Geolocator.getCurrentPosition();
+    setState(() {
+      latitude = position.latitude;
+      longitude = position.longitude;
+    });
+  }
+
+
+  void _sendSOS() async {
+    _getCurrentLocation();
+
+    const String emergencyMessage = 'Emergency! I need help. This is my current location: ';
+    String location = 'https://maps.google.com/?q=$latitude,$longitude';
+    final Uri smsUri = Uri(
+      scheme: 'sms',
+      path: '100', // You can replace this with an emergency number or a contact's number
+      queryParameters: <String, String>{
+        'body': '$emergencyMessage $location',
+      },
+    );
+
+    if (await canLaunchUrl(smsUri)) {
+      await launchUrl(smsUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to send SOS message')),
+      );
+    }
+    print(latitude);
+  }
+
+
   // Function to check if the contact is a duplicate (by phone number)
   bool _isDuplicateContact(String phone) {
     for (var contact in contacts) {
@@ -172,11 +267,11 @@ class _ContactsPageState extends State<ContactsPage> {
                         String phone = contact.phones!.first.value!;
                         if (!_isDuplicateContact(phone)) {
                           setState(() {
+                            addContact(contact.displayName ?? 'Unknown',phone);
                             contacts.add({
                               'name': contact.displayName ?? 'Unknown',
                               'phone': phone,
                             });
-                            // addContact(contact.displayName ?? 'Unknown',phone);
                           });
                           Navigator.of(context).pop();
                         } else {
@@ -222,15 +317,21 @@ class _ContactsPageState extends State<ContactsPage> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: AssetImage('android/images/women_safety.jpeg'), // Ensure this path is correct
-                  radius: 20, // Adjust the size of the logo as needed
-                ),
-                SizedBox(width: 10),
-                Text('Nirbhaya 24X7'),
-              ],
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
+              ),
+              child: const Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: AssetImage('android/images/women_safety.jpeg'),
+                    radius: 20,
+                  ),
+                  SizedBox(width: 10),
+                  Text('Nirbhaya 24X7'),
+                ],
+              ),
             ),
             IconButton(
               icon: const Icon(Icons.logout),
@@ -283,8 +384,25 @@ class _ContactsPageState extends State<ContactsPage> {
                             style: const TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                          Text(contact['phone']!,
-                              style: const TextStyle(color: Colors.black)),
+                          Container(
+                            child: Row(
+
+
+                              children: [
+                                Text(contact['phone']!,
+                                    style: const TextStyle(color: Colors.black)),
+
+                                contact['email'] != 'No email'
+                                    ? IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () => deleteContact(contact['phone']!), // Pass phone to deleteContact
+                                )
+                                    : const SizedBox.shrink(), // This hides the button if the condition is false
+
+                              ],
+                            ),
+                          ),
+
                           Container(
                             color: Colors.grey[200],
                             child: Row(
@@ -300,14 +418,16 @@ class _ContactsPageState extends State<ContactsPage> {
                                       foregroundColor: Colors.white),
                                 ),
                                 ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _messageContact(contact['phone']!),
+                                  onPressed: () => _messageContact(contact['phone']!),
                                   icon: const Icon(Icons.message),
                                   label: const Text('Message'),
                                   style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
-                                      foregroundColor: Colors.white),
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                  ),
                                 ),
+                                // Conditionally render the IconButton based on whether the contact has an email
+
                               ],
                             ),
                           ),
@@ -330,10 +450,14 @@ class _ContactsPageState extends State<ContactsPage> {
               icon: const Icon(Icons.location_on),
               onPressed: _openMap, // Open map to select a location
             ),
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: _openMap, // For future sharing functionality
+            ElevatedButton(
+              onPressed: _sendSOS,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text('SOS'),
             ),
+
           ],
         ),
       ),
