@@ -26,7 +26,7 @@ void main() async{
 
   runApp(MaterialApp(
     title: 'Nirbhaya 24X7',
-    initialRoute: '/login',
+    initialRoute: '/contacts',
     routes: {
       '/login': (context) => const LoginPage(),
       '/contacts': (context) => const ContactsPage(),
@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/login', // Default route
+      initialRoute: '/contacts', // Default route
       routes: {
         '/login': (context) => const LoginPage(), // Login page route
         '/contacts': (context) => const ContactsPage(), // Contacts page route

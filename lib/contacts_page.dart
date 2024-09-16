@@ -43,7 +43,16 @@ class _ContactsPageState extends State<ContactsPage> {
     try {
       String? userEmail = _auth.currentUser?.email;
 
+      // Define default contacts
+      final List<Map<String, dynamic>> defaultContacts = [
+        {'name': 'Women helpline', 'phone': '181', 'email': 'No email'},
+        {'name': 'Police', 'phone': '100', 'email': 'No email'},
+        {'name': 'Ambulance', 'phone': '108', 'email': 'No email'},
+        {'name': 'Fire Brigade', 'phone': '101', 'email': 'No email'},
+      ];
+
       if (userEmail != null) {
+        // Fetch contacts for the logged-in user
         QuerySnapshot querySnapshot = await FirebaseFirestore.instance
             .collection('contacts')
             .get(); // Fetch all contacts
@@ -68,6 +77,13 @@ class _ContactsPageState extends State<ContactsPage> {
             contacts = fetchedContacts;
           });
         }
+      } else {
+        // If no user is logged in, display default contacts
+        if (mounted) {
+          setState(() {
+            contacts = defaultContacts;
+          });
+        }
       }
     } catch (e) {
       print('Error fetching contacts: $e');
@@ -78,6 +94,7 @@ class _ContactsPageState extends State<ContactsPage> {
       }
     }
   }
+
 
 
   Future<void> addContact(String name,String phone) async {
@@ -298,12 +315,124 @@ class _ContactsPageState extends State<ContactsPage> {
   }
 
   // Function to log out and navigate back to login page
-  void _logout(BuildContext context) {
-    Navigator.pushReplacementNamed(context, '/login');
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();  // Sign out the user from Firebase
+
+      // Navigate to the contacts page and clear the previous routes to prevent going back
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/contacts',  // Replace with your login or home page route
+            (Route<dynamic> route) => false,  // Remove all previous routes
+      );
+    } catch (e) {
+      // Handle errors (optional)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error signing out. Please try again.')),
+      );
+    }
   }
+
+  void _showCustomHorizontalMenu(BuildContext context) {
+    User? currentUser = FirebaseAuth.instance.currentUser; // Check if user is logged in
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      pageBuilder: (BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
+        return Align(
+          alignment: Alignment.centerLeft, // Align to the left of the screen
+          child: Material(
+            color: Colors.transparent,
+            child: FractionallySizedBox(
+              widthFactor: 0.5, // Take up half the screen width
+              heightFactor: 1,  // Full height of the screen
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.red[50], // Custom color for the background
+                  borderRadius: const BorderRadius.horizontal(
+                    right: Radius.circular(25.0),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 16.0), // Add top padding
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start, // Align to the start of the column
+                    mainAxisAlignment: MainAxisAlignment.start,   // Items start from the top
+                    children: [
+                      const Text(
+                        "Menu",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (currentUser != null) ...[
+
+                        const SizedBox(height: 20), // Add some space before profile
+                        ListTile(
+                          leading: const Icon(Icons.person, color: Colors.blue),
+                          title: const Text('Profile', style: TextStyle(fontSize: 18)),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const ProfilePage()),
+                            );
+                          },
+                        ),
+                        const Divider(),
+                        const SizedBox(height: 20), // Add some space between the options
+                        ListTile(
+                          leading: const Icon(Icons.logout, color: Colors.red),
+                          title: const Text('Logout', style: TextStyle(fontSize: 18)),
+                          onTap: () {
+                            _logout(context); // Logout function
+                          },
+                        ),
+                      ] else ...[
+                        const SizedBox(height: 20),
+                        ListTile(
+                          leading: const Icon(Icons.login, color: Colors.green),
+                          title: const Text('Login', style: TextStyle(fontSize: 18)),
+                          onTap: () {
+                            Navigator.pushNamed(context, '/login');
+                          },
+                        ),
+                        const Divider(),
+                        const SizedBox(height: 20), // Add some space
+                        ListTile(
+                          leading: const Icon(Icons.app_registration, color: Colors.orange),
+                          title: const Text('Register', style: TextStyle(fontSize: 18)),
+                          onTap: () {
+                            Navigator.pushNamed(context, '/register');
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(-1, 0), // Starts from the left side
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        );
+      },
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
+    User? currentUser = _auth.currentUser;
     // Filter contacts based on search query
     final filteredContacts = contacts
         .where((contact) =>
@@ -314,56 +443,14 @@ class _ContactsPageState extends State<ContactsPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.red,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfilePage()),
-              ),
-              child: const Row(
-                children: [
-                  CircleAvatar(
-                    backgroundImage: AssetImage('android/images/women_safety.jpeg'),
-                    radius: 20,
-                  ),
-                  SizedBox(width: 10),
-                  Text('Nirbhaya 24X7'),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () => _logout(context), // Add logout functionality
-            ),
-          ],
-        ),
-        // Add a search bar at the bottom of the app bar
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(80.0), // Adjusted size for the search bar
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search Contacts',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              onChanged: (query) {
-                setState(() {
-                  searchQuery = query; // Update the search query
-                });
-              },
-            ),
-          ),
+        title: const Text('Nirbhaya 24X7'),
+        // Move the PopupMenuButton to the leading property to place it on the left side
+        leading: IconButton(
+          icon: const Icon(Icons.menu), // Hamburger icon
+          onPressed: () => _showCustomHorizontalMenu(context), // Show the custom menu
         ),
       ),
+
       body: SafeArea(
         child: Column(
           children: [
@@ -462,10 +549,12 @@ class _ContactsPageState extends State<ContactsPage> {
         ),
       ),
       // Floating action button to add a contact from the phone
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: currentUser != null
+          ? FloatingActionButton(
         onPressed: _addContactFromPhone,
         child: const Icon(Icons.add),
-      ),
+      )
+          : null,
     );
   }
 }
